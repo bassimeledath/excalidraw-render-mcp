@@ -1,13 +1,13 @@
 {
-  "name": "@mcp-demos/excalidraw-server",
-  "version": "0.3.0",
+  "name": "excalidraw-mcp",
+  "version": "1.0.0",
   "type": "module",
   "description": "Excalidraw diagram MCP server with headless PNG rendering for Claude Code CLI",
   "license": "MIT",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "bin": {
-    "mcp-server-excalidraw": "dist/index.js"
+    "excalidraw-mcp": "dist/index.js"
   },
   "files": [
     "dist"
@@ -20,6 +20,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.server.json && bun build server.ts renderer.ts --outdir dist --target node --external agent-browser --external \"agent-browser/dist/browser.js\" --external playwright-core && bun build main.ts --outfile dist/index.js --target node --external \"./server.js\" --external \"./renderer.js\" --external agent-browser --external \"agent-browser/dist/browser.js\" --external playwright-core --banner \"#!/usr/bin/env node\"",
+    "postinstall": "agent-browser install",
     "setup": "agent-browser install",
     "serve": "node dist/index.js",
     "start": "npm run build && npm run serve",

@@ -1,81 +1,90 @@
-# Excalidraw MCP App Server
+# excalidraw-mcp
 
-MCP server that streams hand-drawn Excalidraw diagrams with smooth viewport camera control and interactive fullscreen editing.
+MCP server that renders hand-drawn Excalidraw diagrams as PNG files. Designed for **Claude Code CLI** and other MCP clients that don't have a browser surface.
 
-![Demo](demo.gif)
+Uses headless Chromium (via [agent-browser](https://github.com/nicepkg/agent-browser)) to render diagrams server-side. First render takes ~3s (browser launch + CDN import), subsequent renders ~60ms.
 
 ## Install
 
-In [claude.ai](https://claude.ai):
-
-1. Go to **Settings** → **Connectors** → **Add custom connector**
-2. Server URL: `https://excalidraw-mcp-app.vercel.app/mcp`
-3. Done — start using Excalidraw in your conversations
-
-### Alternative: Local Server
-
-**Option A: Download Extension**
-
-1. Download `excalidraw-mcp-app.mcpb` from [Releases](https://github.com/antonpk1/excalidraw-mcp-app/releases)
-2. Double-click to install in Claude Desktop
-
-**Option B: Build from Source**
+### One command (npm)
 
 ```bash
-git clone https://github.com/antonpk1/excalidraw-mcp-app.git
-cd excalidraw-mcp-app
-npm install && npm run build
+# Claude Code
+claude mcp add --scope user --transport stdio excalidraw -- npx -y excalidraw-mcp
+
+# Or with any MCP client
+npx -y excalidraw-mcp
 ```
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+### From source
+
+```bash
+git clone https://github.com/bassimeledath/excalidraw-mcp-app.git
+cd excalidraw-mcp-app
+npm install
+npm run build
+
+# Add to Claude Code
+claude mcp add --scope user --transport stdio excalidraw -- node /absolute/path/to/excalidraw-mcp-app/dist/index.js
+```
+
+### Claude Desktop / other clients
+
+Add to your MCP config:
 
 ```json
 {
   "mcpServers": {
     "excalidraw": {
-      "command": "node",
-      "args": ["/path/to/excalidraw-mcp-app/dist/index.js", "--stdio"]
+      "command": "npx",
+      "args": ["-y", "excalidraw-mcp"]
     }
   }
 }
 ```
 
-Restart Claude Desktop.
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `excalidraw_read_me` | Returns the Excalidraw element format reference (color palettes, element types, examples). Call once before drawing. |
+| `create_excalidraw_diagram` | Renders an Excalidraw element JSON array to a PNG file. Returns the file path. |
 
 ## Usage
 
-Example prompts:
-- "Draw a cute cat using excalidraw"
-- "Draw an architecture diagram showing a user connecting to an API server which talks to a database"
+After installing, ask Claude to draw:
 
-## Releasing a New Version
+- "Draw an architecture diagram showing a FastAPI server connected to Redis and Gemini"
+- "Create an Excalidraw diagram of the git branching model"
+- "Sketch a flowchart for user authentication"
 
-```bash
-# 1. Make changes, commit, push
-git add -A && git commit -m "..." && git push
+Claude will call `excalidraw_read_me` to learn the element format, then `create_excalidraw_diagram` with the element JSON. The PNG is saved to disk and the path is returned.
 
-# 2. Bump version in manifest.json and package.json
+### `create_excalidraw_diagram` parameters
 
-# 3. Rebuild
-npm run build
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `elements` | string | yes | JSON array of Excalidraw elements (see format reference from `excalidraw_read_me`) |
+| `outputPath` | string | no | Absolute path for the output PNG. Defaults to a temp file. |
 
-# 4. Pack the .mcpb bundle
-mcpb pack .
+## How it works
 
-# 5. Create GitHub release with bundle attached
-gh release create v0.2.0 excalidraw-mcp-app.mcpb --title "v0.2.0" --notes "What changed"
-```
+1. A headless Chromium browser is launched as a singleton
+2. The browser navigates to [esm.sh](https://esm.sh) and dynamically imports `@excalidraw/excalidraw`
+3. Elements are converted via `convertToExcalidrawElements()` and rendered to SVG via `exportToSvg()`
+4. Playwright takes an element-level screenshot of the SVG, producing a PNG
+5. The browser stays alive for subsequent renders (~60ms each)
 
-## What are MCP Apps and how can I build one?
+## Requirements
 
-Text responses can only go so far. Sometimes users need to interact with data, not just read about it. [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/) is an official Model Context Protocol extension that lets servers return interactive HTML interfaces (data visualizations, forms, dashboards) that render directly in the chat.
-
-- **Getting started for humans**: [documentation](https://modelcontextprotocol.io/docs/extensions/apps)
-- **Getting started for AIs**: [skill](https://github.com/modelcontextprotocol/ext-apps/blob/main/plugins/mcp-apps/skills/create-mcp-app/SKILL.md)
+- Node.js 18+
+- Chromium is installed automatically via `agent-browser install` (runs as a postinstall hook)
 
 ## Credits
 
-Built with [Excalidraw](https://github.com/excalidraw/excalidraw) — a virtual whiteboard for sketching hand-drawn like diagrams.
+Fork of [excalidraw-mcp-app](https://github.com/antonpk1/excalidraw-mcp-app) by Anton Pk, adapted for headless CLI usage.
+
+Built with [Excalidraw](https://github.com/excalidraw/excalidraw).
 
 ## License
 
