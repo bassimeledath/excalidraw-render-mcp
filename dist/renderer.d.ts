@@ -1,5 +1,5 @@
 /**
- * Headless PNG renderer for Excalidraw diagrams.
+ * Headless renderer for Excalidraw diagrams (PNG and SVG).
  * Uses agent-browser (Playwright wrapper) to render diagrams in headless Chromium.
  * Singleton pattern: browser is lazily initialized on first call and reused.
  *
@@ -17,6 +17,14 @@
 export declare function renderToPng(elementsJson: string, outputPath?: string, options?: {
     scale?: number;
 }): Promise<string>;
+/**
+ * Render Excalidraw elements JSON to an SVG file.
+ *
+ * @param elementsJson - JSON array string of Excalidraw elements
+ * @param outputPath - Optional output file path. If not provided, uses a temp file.
+ * @returns Absolute path to the saved SVG file
+ */
+export declare function renderToSvg(elementsJson: string, outputPath?: string): Promise<string>;
 /**
  * Close the headless browser. Call on process shutdown.
  */

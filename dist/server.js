@@ -6586,11 +6586,13 @@ var BROWSER_INIT_SCRIPT = `
     svg.style.width = w + "px";
     svg.style.height = h + "px";
 
+    const svgMarkup = new XMLSerializer().serializeToString(svg);
+
     const canvas = document.getElementById("canvas");
     canvas.innerHTML = "";
     canvas.appendChild(svg);
 
-    return { width: w, height: h };
+    return { width: w, height: h, svg: svgMarkup };
   };
 
   window.__RENDER_READY__ = true;
@@ -6622,21 +6624,35 @@ async function ensureBrowser() {
   pageReady = true;
   return browser;
 }
-async function renderToPng(elementsJson, outputPath, options) {
+async function renderInBrowser(elementsJson, scale) {
   const mgr = await ensureBrowser();
   const page = mgr.getPage();
-  const scale = options?.scale ?? 2;
-  await page.evaluate(async ({ json, opts }) => {
-    await globalThis.renderDiagram(json, opts);
+  const result = await page.evaluate(async ({ json, opts }) => {
+    return await globalThis.renderDiagram(json, opts);
   }, { json: elementsJson, opts: { scale } });
-  const svgLocator = page.locator("#canvas > svg");
-  await svgLocator.waitFor({ state: "visible", timeout: 1e4 });
-  const dest = outputPath ? path.resolve(outputPath) : path.join(os.tmpdir(), `excalidraw-${Date.now()}.png`);
-  const dir = path.dirname(dest);
+  return { page, svgMarkup: result.svg };
+}
+function ensureDir(filePath) {
+  const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
+}
+async function renderToPng(elementsJson, outputPath, options) {
+  const scale = options?.scale ?? 2;
+  const { page } = await renderInBrowser(elementsJson, scale);
+  const svgLocator = page.locator("#canvas > svg");
+  await svgLocator.waitFor({ state: "visible", timeout: 1e4 });
+  const dest = outputPath ? path.resolve(outputPath) : path.join(os.tmpdir(), `excalidraw-${Date.now()}.png`);
+  ensureDir(dest);
   await svgLocator.screenshot({ path: dest, type: "png" });
+  return dest;
+}
+async function renderToSvg(elementsJson, outputPath) {
+  const { svgMarkup } = await renderInBrowser(elementsJson, 1);
+  const dest = outputPath ? path.resolve(outputPath) : path.join(os.tmpdir(), `excalidraw-${Date.now()}.svg`);
+  ensureDir(dest);
+  fs.writeFileSync(dest, svgMarkup, "utf-8");
   return dest;
 }
 async function closeBrowser() {
@@ -28562,15 +28578,16 @@ function registerTools(server) {
     return { content: [{ type: "text", text: RECALL_CHEAT_SHEET }] };
   });
   server.registerTool("create_excalidraw_diagram", {
-    description: `Renders a hand-drawn Excalidraw diagram to a PNG file.
+    description: `Renders a hand-drawn Excalidraw diagram to a PNG or SVG file.
 Call excalidraw_read_me first to learn the element format.
-Returns the file path of the saved PNG.`,
+Returns the file path of the saved file.`,
     inputSchema: exports_external.object({
       elements: exports_external.string().describe("JSON array string of Excalidraw elements. Must be valid JSON — no comments, no trailing commas. Keep compact. Call read_me first for format reference."),
-      outputPath: exports_external.string().optional().describe("Optional absolute file path for the output PNG. If omitted, saves to a temp file.")
+      outputPath: exports_external.string().optional().describe("Optional absolute file path for the output file. If omitted, saves to a temp file."),
+      format: exports_external.enum(["png", "svg"]).optional().describe("Output format: 'png' (default, rasterized) or 'svg' (vector, scalable). SVG is best for high-quality output that needs to scale to any size.")
     }),
     annotations: { readOnlyHint: true }
-  }, async ({ elements, outputPath }) => {
+  }, async ({ elements, outputPath, format }) => {
     try {
       const parsed = JSON.parse(elements);
       if (!Array.isArray(parsed)) {
@@ -28586,7 +28603,8 @@ Returns the file path of the saved PNG.`,
       };
     }
     try {
-      const filePath = await renderToPng(elements, outputPath);
+      const outputFormat = format ?? "png";
+      const filePath = outputFormat === "svg" ? await renderToSvg(elements, outputPath) : await renderToPng(elements, outputPath);
       return {
         content: [{ type: "text", text: `Diagram saved to: ${filePath}` }]
       };

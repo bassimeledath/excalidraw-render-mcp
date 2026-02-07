@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod/v4";
-import { renderToPng } from "./renderer.js";
+import { renderToPng, renderToSvg } from "./renderer.js";
 
 // ============================================================
 // RECALL: shared knowledge for the agent
@@ -204,25 +204,28 @@ export function registerTools(server: McpServer): void {
   );
 
   // ============================================================
-  // Tool 2: create_diagram (headless PNG render)
+  // Tool 2: create_diagram (headless render to PNG or SVG)
   // ============================================================
   server.registerTool(
     "create_excalidraw_diagram",
     {
-      description: `Renders a hand-drawn Excalidraw diagram to a PNG file.
+      description: `Renders a hand-drawn Excalidraw diagram to a PNG or SVG file.
 Call excalidraw_read_me first to learn the element format.
-Returns the file path of the saved PNG.`,
+Returns the file path of the saved file.`,
       inputSchema: z.object({
         elements: z.string().describe(
           "JSON array string of Excalidraw elements. Must be valid JSON — no comments, no trailing commas. Keep compact. Call read_me first for format reference."
         ),
         outputPath: z.string().optional().describe(
-          "Optional absolute file path for the output PNG. If omitted, saves to a temp file."
+          "Optional absolute file path for the output file. If omitted, saves to a temp file."
+        ),
+        format: z.enum(["png", "svg"]).optional().describe(
+          "Output format: 'png' (default, rasterized) or 'svg' (vector, scalable). SVG is best for high-quality output that needs to scale to any size."
         ),
       }),
       annotations: { readOnlyHint: true },
     },
-    async ({ elements, outputPath }): Promise<CallToolResult> => {
+    async ({ elements, outputPath, format }): Promise<CallToolResult> => {
       // Validate JSON before attempting render
       try {
         const parsed = JSON.parse(elements);
@@ -240,7 +243,10 @@ Returns the file path of the saved PNG.`,
       }
 
       try {
-        const filePath = await renderToPng(elements, outputPath);
+        const outputFormat = format ?? "png";
+        const filePath = outputFormat === "svg"
+          ? await renderToSvg(elements, outputPath)
+          : await renderToPng(elements, outputPath);
         return {
           content: [{ type: "text", text: `Diagram saved to: ${filePath}` }],
         };

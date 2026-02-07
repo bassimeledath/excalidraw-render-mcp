@@ -1,6 +1,6 @@
 # excalidraw-render
 
-Headless Excalidraw diagram renderer for **Claude Code CLI** and other MCP clients. Renders hand-drawn PNG diagrams locally — no data leaves your machine.
+Headless Excalidraw diagram renderer for **Claude Code CLI** and other MCP clients. Renders hand-drawn diagrams as PNG or SVG locally — no data leaves your machine.
 
 Uses headless Chromium (via [agent-browser](https://github.com/vercel-labs/agent-browser)) to render diagrams server-side. First render takes ~3s (browser launch + CDN import), subsequent renders ~60ms.
 
@@ -48,7 +48,7 @@ Add to your MCP config:
 | Tool | Description |
 |------|-------------|
 | `excalidraw_read_me` | Returns the Excalidraw element format reference (color palettes, element types, examples). Call once before drawing. |
-| `create_excalidraw_diagram` | Renders an Excalidraw element JSON array to a PNG file. Returns the file path. |
+| `create_excalidraw_diagram` | Renders an Excalidraw element JSON array to a PNG or SVG file. Returns the file path. |
 
 ## Usage
 
@@ -58,14 +58,15 @@ After installing, ask Claude to draw:
 - "Create an Excalidraw diagram of the git branching model"
 - "Sketch a flowchart for user authentication"
 
-Claude will call `excalidraw_read_me` to learn the element format, then `create_excalidraw_diagram` with the element JSON. The PNG is saved to disk and the path is returned.
+Claude will call `excalidraw_read_me` to learn the element format, then `create_excalidraw_diagram` with the element JSON. The file is saved to disk and the path is returned.
 
 ### `create_excalidraw_diagram` parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `elements` | string | yes | JSON array of Excalidraw elements (see format reference from `excalidraw_read_me`) |
-| `outputPath` | string | no | Absolute path for the output PNG. Defaults to a temp file. |
+| `outputPath` | string | no | Absolute path for the output file. Defaults to a temp file. |
+| `format` | string | no | `"png"` (default) or `"svg"`. SVG outputs vector graphics that scale to any size without quality loss. |
 
 ## How it works
 
@@ -74,7 +75,7 @@ Claude will call `excalidraw_read_me` to learn the element format, then `create_
 1. A headless Chromium browser is launched as a singleton
 2. The browser navigates to [esm.sh](https://esm.sh) and dynamically imports `@excalidraw/excalidraw`
 3. Elements are converted via `convertToExcalidrawElements()` and rendered to SVG via `exportToSvg()`
-4. Playwright takes an element-level screenshot of the SVG, producing a PNG
+4. For PNG: Playwright takes an element-level screenshot of the SVG. For SVG: the markup is serialized directly to file.
 5. The browser stays alive for subsequent renders (~60ms each)
 
 ## Privacy
@@ -98,7 +99,7 @@ This project was inspired by [excalidraw-mcp-app](https://github.com/antonpk1/ex
 |---|---|---|
 | **Target** | Claude Desktop (browser) | Claude Code CLI (terminal) |
 | **Rendering** | Client-side in browser UI | Server-side headless Chromium |
-| **Output** | Interactive SVG in chat | PNG file on disk |
+| **Output** | Interactive SVG in chat | PNG or SVG file on disk |
 | **Dependencies** | React, MCP Apps ext | agent-browser, Playwright |
 | **Privacy** | Renders in client app | Fully local, no data sent externally |
 

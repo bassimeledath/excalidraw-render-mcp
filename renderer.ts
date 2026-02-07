@@ -1,5 +1,5 @@
 /**
- * Headless PNG renderer for Excalidraw diagrams.
+ * Headless renderer for Excalidraw diagrams (PNG and SVG).
  * Uses agent-browser (Playwright wrapper) to render diagrams in headless Chromium.
  * Singleton pattern: browser is lazily initialized on first call and reused.
  *
@@ -110,11 +110,13 @@ const BROWSER_INIT_SCRIPT = `
     svg.style.width = w + "px";
     svg.style.height = h + "px";
 
+    const svgMarkup = new XMLSerializer().serializeToString(svg);
+
     const canvas = document.getElementById("canvas");
     canvas.innerHTML = "";
     canvas.appendChild(svg);
 
-    return { width: w, height: h };
+    return { width: w, height: h, svg: svgMarkup };
   };
 
   window.__RENDER_READY__ = true;
@@ -156,6 +158,37 @@ async function ensureBrowser(): Promise<BrowserManager> {
 }
 
 /**
+ * Render elements in headless browser and return the result.
+ * Shared by renderToPng and renderToSvg.
+ */
+async function renderInBrowser(
+  elementsJson: string,
+  scale: number,
+): Promise<{ page: any; svgMarkup: string }> {
+  const mgr = await ensureBrowser();
+  const page = mgr.getPage();
+
+  const result = await page.evaluate(
+    async ({ json, opts }: { json: string; opts: { scale: number } }) => {
+      return await (globalThis as any).renderDiagram(json, opts);
+    },
+    { json: elementsJson, opts: { scale } },
+  );
+
+  return { page, svgMarkup: result.svg };
+}
+
+/**
+ * Ensure the directory for a file path exists.
+ */
+function ensureDir(filePath: string): void {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+/**
  * Render Excalidraw elements JSON to a PNG file.
  *
  * @param elementsJson - JSON array string of Excalidraw elements
@@ -168,20 +201,9 @@ export async function renderToPng(
   outputPath?: string,
   options?: { scale?: number },
 ): Promise<string> {
-  const mgr = await ensureBrowser();
-  const page = mgr.getPage();
-
   const scale = options?.scale ?? 2;
+  const { page } = await renderInBrowser(elementsJson, scale);
 
-  // Call the render function in the browser context
-  await page.evaluate(
-    async ({ json, opts }: { json: string; opts: { scale: number } }) => {
-      await (globalThis as any).renderDiagram(json, opts);
-    },
-    { json: elementsJson, opts: { scale } },
-  );
-
-  // Take element-level screenshot of the SVG
   const svgLocator = page.locator("#canvas > svg");
   await svgLocator.waitFor({ state: "visible", timeout: 10_000 });
 
@@ -189,13 +211,31 @@ export async function renderToPng(
     ? path.resolve(outputPath)
     : path.join(os.tmpdir(), `excalidraw-${Date.now()}.png`);
 
-  // Ensure the output directory exists
-  const dir = path.dirname(dest);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
+  ensureDir(dest);
   await svgLocator.screenshot({ path: dest, type: "png" });
+
+  return dest;
+}
+
+/**
+ * Render Excalidraw elements JSON to an SVG file.
+ *
+ * @param elementsJson - JSON array string of Excalidraw elements
+ * @param outputPath - Optional output file path. If not provided, uses a temp file.
+ * @returns Absolute path to the saved SVG file
+ */
+export async function renderToSvg(
+  elementsJson: string,
+  outputPath?: string,
+): Promise<string> {
+  const { svgMarkup } = await renderInBrowser(elementsJson, 1);
+
+  const dest = outputPath
+    ? path.resolve(outputPath)
+    : path.join(os.tmpdir(), `excalidraw-${Date.now()}.svg`);
+
+  ensureDir(dest);
+  fs.writeFileSync(dest, svgMarkup, "utf-8");
 
   return dest;
 }
