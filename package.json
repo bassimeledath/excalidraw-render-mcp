@@ -1,5 +1,5 @@
 {
-  "name": "excalidraw-mcp",
+  "name": "excalidraw-render",
   "version": "1.0.0",
   "type": "module",
   "description": "Excalidraw diagram MCP server with headless PNG rendering for Claude Code CLI",
@@ -7,7 +7,7 @@
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "bin": {
-    "excalidraw-mcp": "dist/index.js"
+    "excalidraw-render": "dist/index.js"
   },
   "files": [
     "dist"

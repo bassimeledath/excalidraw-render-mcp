@@ -1,8 +1,8 @@
-# excalidraw-mcp
+# excalidraw-render
 
-MCP server that renders hand-drawn Excalidraw diagrams as PNG files. Designed for **Claude Code CLI** and other MCP clients that don't have a browser surface.
+Headless Excalidraw diagram renderer for **Claude Code CLI** and other MCP clients. Renders hand-drawn PNG diagrams locally — no data leaves your machine.
 
-Uses headless Chromium (via [agent-browser](https://github.com/nicepkg/agent-browser)) to render diagrams server-side. First render takes ~3s (browser launch + CDN import), subsequent renders ~60ms.
+Uses headless Chromium (via [agent-browser](https://github.com/vercel-labs/agent-browser)) to render diagrams server-side. First render takes ~3s (browser launch + CDN import), subsequent renders ~60ms.
 
 ## Install
 
@@ -10,22 +10,22 @@ Uses headless Chromium (via [agent-browser](https://github.com/nicepkg/agent-bro
 
 ```bash
 # Claude Code
-claude mcp add --scope user --transport stdio excalidraw -- npx -y excalidraw-mcp
+claude mcp add --scope user --transport stdio excalidraw -- npx -y excalidraw-render
 
 # Or with any MCP client
-npx -y excalidraw-mcp
+npx -y excalidraw-render
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/bassimeledath/excalidraw-mcp-app.git
-cd excalidraw-mcp-app
+git clone https://github.com/bassimeledath/excalidraw-render.git
+cd excalidraw-render
 npm install
 npm run build
 
 # Add to Claude Code
-claude mcp add --scope user --transport stdio excalidraw -- node /absolute/path/to/excalidraw-mcp-app/dist/index.js
+claude mcp add --scope user --transport stdio excalidraw -- node /absolute/path/to/excalidraw-render/dist/index.js
 ```
 
 ### Claude Desktop / other clients
@@ -37,7 +37,7 @@ Add to your MCP config:
   "mcpServers": {
     "excalidraw": {
       "command": "npx",
-      "args": ["-y", "excalidraw-mcp"]
+      "args": ["-y", "excalidraw-render"]
     }
   }
 }
@@ -88,7 +88,7 @@ This makes it safe for confidential work like internal architecture diagrams, se
 
 ## Credits
 
-Fork of [excalidraw-mcp-app](https://github.com/antonpk1/excalidraw-mcp-app) by Anton Pk, adapted for headless CLI usage.
+Originally inspired by [excalidraw-mcp-app](https://github.com/antonpk1/excalidraw-mcp-app) by Anton Pk. Rewritten for headless CLI usage with a completely different rendering architecture.
 
 Built with [Excalidraw](https://github.com/excalidraw/excalidraw).
 
