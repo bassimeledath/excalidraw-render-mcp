@@ -69,6 +69,8 @@ Claude will call `excalidraw_read_me` to learn the element format, then `create_
 
 ## How it works
 
+![Architecture](architecture.png)
+
 1. A headless Chromium browser is launched as a singleton
 2. The browser navigates to [esm.sh](https://esm.sh) and dynamically imports `@excalidraw/excalidraw`
 3. Elements are converted via `convertToExcalidrawElements()` and rendered to SVG via `exportToSvg()`
@@ -86,11 +88,21 @@ This makes it safe for confidential work like internal architecture diagrams, se
 - Node.js 18+
 - Chromium is installed automatically via `agent-browser install` (runs as a postinstall hook)
 
-## Credits
+## Credits & Inspiration
 
-Originally inspired by [excalidraw-mcp-app](https://github.com/antonpk1/excalidraw-mcp-app) by Anton Pk. Rewritten for headless CLI usage with a completely different rendering architecture.
+This project was inspired by [excalidraw-mcp-app](https://github.com/antonpk1/excalidraw-mcp-app) by Anton Pk, which renders interactive Excalidraw diagrams inside Claude Desktop using MCP Apps (`ui://` resources). It's a great tool if you're using Claude Desktop with a browser surface.
 
-Built with [Excalidraw](https://github.com/excalidraw/excalidraw).
+**excalidraw-render** takes a different approach for a different use case:
+
+| | excalidraw-mcp-app | excalidraw-render |
+|---|---|---|
+| **Target** | Claude Desktop (browser) | Claude Code CLI (terminal) |
+| **Rendering** | Client-side in browser UI | Server-side headless Chromium |
+| **Output** | Interactive SVG in chat | PNG file on disk |
+| **Dependencies** | React, MCP Apps ext | agent-browser, Playwright |
+| **Privacy** | Renders in client app | Fully local, no data sent externally |
+
+Built with [Excalidraw](https://github.com/excalidraw/excalidraw) and [agent-browser](https://github.com/vercel-labs/agent-browser).
 
 ## License
 
