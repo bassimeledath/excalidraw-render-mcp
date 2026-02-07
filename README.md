@@ -75,6 +75,12 @@ Claude will call `excalidraw_read_me` to learn the element format, then `create_
 4. Playwright takes an element-level screenshot of the SVG, producing a PNG
 5. The browser stays alive for subsequent renders (~60ms each)
 
+## Privacy
+
+All rendering happens locally in a headless Chromium instance on your machine. Your diagram data is never sent to Excalidraw's servers or any third party. The only network request is fetching the Excalidraw JavaScript library from esm.sh at startup — no diagram content is transmitted.
+
+This makes it safe for confidential work like internal architecture diagrams, security designs, or proprietary system documentation.
+
 ## Requirements
 
 - Node.js 18+
