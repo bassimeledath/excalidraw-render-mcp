@@ -82,8 +82,6 @@ Claude will call `excalidraw_read_me` to learn the element format, then `create_
 
 Diagrams are rendered locally in a headless Chromium instance on your machine, not on Excalidraw's servers. The only network request is fetching the Excalidraw JavaScript library from esm.sh at startup — no diagram content is sent to third-party servers.
 
-This makes it suitable for internal architecture diagrams, security designs, or proprietary system documentation.
-
 ## Requirements
 
 - Node.js 18+
