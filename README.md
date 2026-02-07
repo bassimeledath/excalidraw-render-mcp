@@ -4,6 +4,16 @@ Headless Excalidraw diagram renderer for **Claude Code CLI** and other MCP clien
 
 Uses headless Chromium (via [agent-browser](https://github.com/vercel-labs/agent-browser)) to render diagrams server-side. First render takes ~3s (browser launch + CDN import), subsequent renders ~60ms.
 
+## How it works
+
+![Architecture](architecture.png)
+
+1. A headless Chromium browser is launched as a singleton
+2. The browser navigates to [esm.sh](https://esm.sh) and dynamically imports `@excalidraw/excalidraw`
+3. Elements are converted via `convertToExcalidrawElements()` and rendered to SVG via `exportToSvg()`
+4. For PNG: Playwright takes an element-level screenshot of the SVG. For SVG: the markup is serialized directly to file.
+5. The browser stays alive for subsequent renders (~60ms each)
+
 ## Install
 
 ### One command (npm)
@@ -67,16 +77,6 @@ Claude will call `excalidraw_read_me` to learn the element format, then `create_
 | `elements` | string | yes | JSON array of Excalidraw elements (see format reference from `excalidraw_read_me`) |
 | `outputPath` | string | no | Absolute path for the output file. Defaults to a temp file. |
 | `format` | string | no | `"png"` (default) or `"svg"`. SVG outputs vector graphics that scale to any size without quality loss. |
-
-## How it works
-
-![Architecture](architecture.png)
-
-1. A headless Chromium browser is launched as a singleton
-2. The browser navigates to [esm.sh](https://esm.sh) and dynamically imports `@excalidraw/excalidraw`
-3. Elements are converted via `convertToExcalidrawElements()` and rendered to SVG via `exportToSvg()`
-4. For PNG: Playwright takes an element-level screenshot of the SVG. For SVG: the markup is serialized directly to file.
-5. The browser stays alive for subsequent renders (~60ms each)
 
 ## Privacy
 
